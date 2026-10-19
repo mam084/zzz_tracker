@@ -155,7 +155,6 @@
     hp:     [-5, -1, +1, +5],
     energy: [-1, +1],
     db:     [-10, -1, +1, +10],
-    stun:   [+1, +5],           // GM controls for player stun
     daze:   [+1],               // GM controls for enemy daze
   };
   const ROOT = "vitals";        // player cards
@@ -256,12 +255,21 @@
     $("proom").textContent = room.toUpperCase();
     state = null;
     show("player");
+    let loaded = false;
     unsubs.push(onValue(ref, (snap) => {
       if (!snap.exists()) {
+        if (loaded) {
+          store.clear();
+          startJoin();
+          alert("The GM removed you from the room. Rejoin anytime.");
+          return;
+        }
+        loaded = true;
         set(ref, { name, hp: DEFAULT_HP_MAX, hpMax: DEFAULT_HP_MAX, energy: ENERGY_MAX,
                    db: 0, stun: 0, updatedAt: serverTimestamp() }).catch(fail);
         return;
       }
+      loaded = true;
       state = snap.val();
       renderPlayer();
     }));
@@ -285,17 +293,11 @@
     const list = Object.entries(gmPlayers).filter(([, p]) => p && p.name)
       .sort(([, a], [, b]) => a.name.localeCompare(b.name));
     $("gm-players").innerHTML = list.length ? list.map(([id, p]) => {
-      const k = { kind: "player", id, stat: "stun" };
       return `<div class="card">
-        <div class="name">${esc(p.name)}</div>
+        <div class="row"><span class="name">${esc(p.name)}</span>${btn({ kind: "player", id, act: "del" }, "✕", "x")}</div>
         ${mini("HP", p.hp, p.hpMax, "hp")}
         ${mini("Energy", p.energy, ENERGY_MAX, "en")}
         ${mini("Decibels", p.db, DB_MAX, "dbc")}
-        <div class="row" style="margin-bottom:8px"><span>Stun</span><b class="stunc">${p.stun || 0}</b></div>
-        <div class="btns sm">
-          ${STEPS.stun.map((d) => btn({ ...k, act: "bump", d }, sign(d))).join("")}
-          ${btn({ ...k, act: "reset" }, "Reset", "reset")}
-        </div>
       </div>`;
     }).join("") : `<p class="muted">Waiting for players to join…</p>`;
   }
@@ -347,7 +349,7 @@
       const v = askNum(stat === "hpMax" ? `Max HP for ${item.name}:` : `Daze cap for ${item.name}:`, item[stat]);
       if (v != null && v >= 1) write({ [stat]: v, [cur]: Math.min(item[cur], v) });
     } else if (act === "del") {
-      if (confirm(`Remove ${item.name}?`)) remove(r).catch(fail);
+      if (confirm(kind === "player" ? `Remove ${item.name} from the room?` : `Remove ${item.name}?`)) remove(r).catch(fail);
     }
   });
 
