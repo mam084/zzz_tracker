@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vitals Tracker</title>
+<style>
+  :root {
+    --bg: #14161c; --card: #1e222b; --line: #2c313c; --btn: #2a2f3a; --btn-press: #353b48;
+    --text: #eef0f4; --muted: #9aa1ad;
+    --hp: #e5484d; --en: #3e9bff; --db: #f5a524; --stun: #a77bf3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+         padding: 16px; padding-bottom: 48px; max-width: 560px; margin-inline: auto; }
+  h1 { font-size: 22px; margin: 8px 0 20px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  input { width: 100%; font: inherit; color: var(--text); background: var(--card);
+          border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  button { font: inherit; color: var(--text); background: var(--btn); border: 0;
+           border-radius: 10px; padding: 12px 0; cursor: pointer; touch-action: manipulation; }
+  button:active { background: var(--btn-press); }
+  .primary { background: var(--en); font-weight: 600; width: 100%; margin-top: 12px; }
+  .ghost { background: transparent; border: 1px solid var(--line); padding: 8px 14px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .name { font-size: 22px; font-weight: 700; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          padding: 14px; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .label { font-weight: 600; }
+  .val { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+  .bar { height: 10px; background: var(--btn); border-radius: 99px; overflow: hidden; margin: 8px 0 12px; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .2s; }
+  .btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+  .btns button { font-size: 18px; font-weight: 600; }
+  .max { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .max input { width: 90px; padding: 8px; }
+
+  [data-stat="hp"] .bar i { background: var(--hp); }   [data-stat="hp"] .val { color: var(--hp); }
+  [data-stat="energy"] .bar i { background: var(--en); } [data-stat="energy"] .val { color: var(--en); }
+  [data-stat="db"] .bar i { background: var(--db); }   [data-stat="db"] .val { color: var(--db); }
+  [data-stat="stun"] .val { color: var(--stun); }
+  [data-stat="stun"] .btns { margin-top: 12px; }
+  .reset { color: var(--stun); }
+
+  /* GM view */
+  .grid { display: grid; gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .card .name { font-size: 18px; margin-bottom: 8px; }
+  .mini { margin-bottom: 8px; }
+  .mini .row { font-size: 14px; }
+  .mini .bar { height: 6px; margin: 4px 0 0; }
+  .hp i { background: var(--hp); } .en i { background: var(--en); } .dbc i { background: var(--db); }
+  .stunrow b { color: var(--stun); }
+</style>
+</head>
+<body>
+
+<!-- Join screen -->
+<section id="join" hidden>
+  <h1>Vitals Tracker</h1>
+  <div class="field"><label for="room">Room code</label>
+    <input id="room" autocomplete="off" autocapitalize="characters" placeholder="e.g. KUNEA"></div>
+  <div class="field"><label for="pname-in">Character name</label>
+    <input id="pname-in" autocomplete="off" placeholder="Your character"></div>
+  <button class="primary" id="join-btn">Join</button>
+  <p class="muted" style="margin-top:20px">GM? <a href="#" id="gm-link" style="color:var(--en)">Open the GM view</a> with the room code above.</p>
+</section>
+
+<!-- Player screen: only this player's card -->
+<section id="player" hidden>
+  <header class="top">
+    <div><div class="name" id="pname"></div><div class="muted">Room <span id="proom"></span></div></div>
+    <button class="ghost" id="leave">Switch</button>
+  </header>
+
+  <div class="stat" data-stat="hp">
+    <div class="row"><span class="label">HP</span><span class="val" data-val title="Tap to set"></span></div>
+    <div class="bar"><i></i></div>
+    <div class="btns"></div>
+    <label class="max">Max HP <input id="hpmax" type="number" inputmode="numeric" min="1"></label>
+  </div>
+
+  <div class="stat" data-stat="energy">
+    <div class="row"><span class="label">Energy</span><span class="val" data-val title="Tap to set"></span></div>
+    <div class="bar"><i></i></div>
+    <div class="btns"></div>
+  </div>
+
+  <div class="stat" data-stat="db">
+    <div class="row"><span class="label">Decibels</span><span class="val" data-val title="Tap to set"></span></div>
+    <div class="bar"><i></i></div>
+    <div class="btns"></div>
+  </div>
+
+  <div class="stat" data-stat="stun">
+    <div class="row"><span class="label">Stun</span><span class="val" data-val></span></div>
+    <div class="btns"></div>
+  </div>
+</section>
+
+<!-- GM screen: everyone's card, read-only -->
+<section id="gm" hidden>
+  <header class="top">
+    <div><div class="name">GM view</div><div class="muted">Room <span id="groom"></span></div></div>
+    <button class="ghost" id="gm-leave">Exit</button>
+  </header>
+  <div class="grid" id="gm-grid"><p class="muted">Waiting for players to join…</p></div>
+</section>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, collection, setDoc, onSnapshot, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ===== Settings — edit these =====
+  const firebaseConfig = {
+    // Paste the same config object you use in atb-timeline
+  };
+  const ENERGY_MAX = 10;      // fixed max energy for everyone
+  const DB_MAX = 100;         // fixed max decibels for everyone
+  const DEFAULT_HP_MAX = 20;  // starting Max HP for a new character (players can change it)
+  const STEPS = {
+    hp:     [-5, -1, +1, +5],
+    energy: [-1, +1],
+    db:     [-10, -1, +1, +10],
+    stun:   [+1, +5],
+  };
+  const COLLECTION = "vitals";  // separate from the ATB timeline's data
+  // =================================
+
+  const db = getFirestore(initializeApp(firebaseConfig));
+  const $ = (id) => document.getElementById(id);
+  const slug = (s) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const show = (id) => ["join", "player", "gm"].forEach((s) => ($(s).hidden = s !== id));
+
+  const store = {
+    get() { try { return JSON.parse(localStorage.getItem("vitals-session")); } catch { return null; } },
+    set(v) { try { localStorage.setItem("vitals-session", JSON.stringify(v)); } catch {} },
+    clear() { try { localStorage.removeItem("vitals-session"); } catch {} },
+  };
+
+  let unsub = null;
+
+  // ---------- Join ----------
+  function startJoin() {
+    if (unsub) { unsub(); unsub = null; }
+    history.replaceState(null, "", location.pathname);
+    show("join");
+  }
+  $("join-btn").onclick = () => {
+    const room = $("room").value.trim(), name = $("pname-in").value.trim();
+    if (!slug(room) || !slug(name)) return alert("Enter a room code and character name.");
+    store.set({ room, name });
+    startPlayer(room, name);
+  };
+  $("gm-link").onclick = (e) => {
+    e.preventDefault();
+    const room = $("room").value.trim();
+    if (!slug(room)) return alert("Enter the room code first.");
+    location.search = "?gm=" + encodeURIComponent(room);
+  };
+
+  // ---------- Player ----------
+  let ref = null, state = null;
+  const maxFor = (stat) => ({ hp: state.hpMax, energy: ENERGY_MAX, db: DB_MAX, stun: Infinity }[stat]);
+
+  // Build the +/- buttons once
+  for (const [stat, steps] of Object.entries(STEPS)) {
+    const box = document.querySelector(`#player [data-stat="${stat}"] .btns`);
+    for (const d of steps) {
+      const b = document.createElement("button");
+      b.textContent = (d > 0 ? "+" : "−") + Math.abs(d);
+      b.onclick = () => state && save({ [stat]: clamp((state[stat] || 0) + d, 0, maxFor(stat)) });
+      box.appendChild(b);
+    }
+    if (stat === "stun") {
+      const r = document.createElement("button");
+      r.textContent = "Reset"; r.className = "reset";
+      r.onclick = () => state && save({ stun: 0 });
+      box.appendChild(r);
+    }
+  }
+
+  // Tap a value to type an exact number
+  for (const stat of ["hp", "energy", "db"]) {
+    document.querySelector(`#player [data-stat="${stat}"] [data-val]`).onclick = () => {
+      if (!state) return;
+      const v = parseInt(prompt("Set value:", state[stat]), 10);
+      if (!Number.isNaN(v)) save({ [stat]: clamp(v, 0, maxFor(stat)) });
+    };
+  }
+
+  $("hpmax").onchange = () => {
+    const v = parseInt($("hpmax").value, 10);
+    if (Number.isNaN(v) || v < 1) return renderPlayer();
+    save({ hpMax: v, hp: Math.min(state.hp, v) });
+  };
+
+  function save(patch) {
+    state = { ...state, ...patch };
+    renderPlayer();
+    setDoc(ref, { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+  }
+
+  function setStat(stat, v, max) {
+    const el = document.querySelector(`#player [data-stat="${stat}"]`);
+    el.querySelector("[data-val]").textContent = max == null ? v : `${v} / ${max}`;
+    const bar = el.querySelector(".bar i");
+    if (bar) bar.style.width = max ? `${clamp((v / max) * 100, 0, 100)}%` : "0";
+  }
+
+  function renderPlayer() {
+    setStat("hp", state.hp, state.hpMax);
+    setStat("energy", state.energy, ENERGY_MAX);
+    setStat("db", state.db, DB_MAX);
+    setStat("stun", state.stun, null);
+    if (document.activeElement !== $("hpmax")) $("hpmax").value = state.hpMax;
+  }
+
+  function startPlayer(room, name) {
+    if (unsub) unsub();
+    ref = doc(db, COLLECTION, slug(room), "players", slug(name));
+    $("pname").textContent = name;
+    $("proom").textContent = room.toUpperCase();
+    state = null;
+    show("player");
+    unsub = onSnapshot(ref, (snap) => {
+      if (!snap.exists()) {
+        setDoc(ref, { name, hp: DEFAULT_HP_MAX, hpMax: DEFAULT_HP_MAX, energy: ENERGY_MAX,
+                      db: 0, stun: 0, updatedAt: serverTimestamp() });
+        return;
+      }
+      state = snap.data();
+      renderPlayer();
+    });
+  }
+  $("leave").onclick = () => { store.clear(); startJoin(); };
+
+  // ---------- GM ----------
+  function mini(label, v, max, cls) {
+    const pct = max ? clamp((v / max) * 100, 0, 100) : 0;
+    return `<div class="mini"><div class="row"><span>${label}</span><b>${v} / ${max}</b></div>
+            <div class="bar ${cls}"><i style="width:${pct}%"></i></div></div>`;
+  }
+  function startGM(room) {
+    $("groom").textContent = room.toUpperCase();
+    show("gm");
+    unsub = onSnapshot(collection(db, COLLECTION, slug(room), "players"), (snap) => {
+      const players = snap.docs.map((d) => d.data()).sort((a, b) => a.name.localeCompare(b.name));
+      $("gm-grid").innerHTML = players.length ? players.map((p) => `
+        <div class="card">
+          <div class="name">${esc(p.name)}</div>
+          ${mini("HP", p.hp, p.hpMax, "hp")}
+          ${mini("Energy", p.energy, ENERGY_MAX, "en")}
+          ${mini("Decibels", p.db, DB_MAX, "dbc")}
+          <div class="row stunrow"><span>Stun</span><b>${p.stun}</b></div>
+        </div>`).join("") : `<p class="muted">Waiting for players to join…</p>`;
+    });
+  }
+  $("gm-leave").onclick = startJoin;
+
+  // ---------- Boot ----------
+  const gmRoom = new URLSearchParams(location.search).get("gm");
+  const saved = store.get();
+  if (gmRoom) startGM(gmRoom);
+  else if (saved?.room && saved?.name) startPlayer(saved.room, saved.name);
+  else startJoin();
+</script>
+</body>
+</html>
