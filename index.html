@@ -8,13 +8,14 @@
   :root {
     --bg: #14161c; --card: #1e222b; --line: #2c313c; --btn: #2a2f3a; --btn-press: #353b48;
     --text: #eef0f4; --muted: #9aa1ad;
-    --hp: #e5484d; --en: #3e9bff; --db: #f5a524; --stun: #a77bf3;
+    --hp: #e5484d; --en: #3e9bff; --db: #f5a524; --stun: #a77bf3; --enemy: #ff6b6b;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
          padding: 16px; padding-bottom: 48px; max-width: 560px; margin-inline: auto; }
   h1 { font-size: 22px; margin: 8px 0 20px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 24px 0 10px; }
   .muted { color: var(--muted); font-size: 14px; }
   input { width: 100%; font: inherit; color: var(--text); background: var(--card);
           border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
@@ -23,6 +24,8 @@
   button:active { background: var(--btn-press); }
   .primary { background: var(--en); font-weight: 600; width: 100%; margin-top: 12px; }
   .ghost { background: transparent; border: 1px solid var(--line); padding: 8px 14px; }
+  .link { background: none; color: var(--muted); padding: 6px 0; font-size: 13px; text-decoration: underline; }
+  .x { background: none; color: var(--muted); padding: 4px 8px; font-size: 18px; }
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 4px; }
 
@@ -30,32 +33,40 @@
   .name { font-size: 22px; font-weight: 700; }
   .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
           padding: 14px; margin-bottom: 12px; }
-  .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .label { font-weight: 600; }
   .val { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
   .bar { height: 10px; background: var(--btn); border-radius: 99px; overflow: hidden; margin: 8px 0 12px; }
   .bar i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .2s; }
   .btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
   .btns button { font-size: 18px; font-weight: 600; }
+  .btns.sm button { font-size: 15px; padding: 9px 0; }
   .max { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--muted); }
   .max input { width: 90px; padding: 8px; }
 
   [data-stat="hp"] .bar i { background: var(--hp); }   [data-stat="hp"] .val { color: var(--hp); }
   [data-stat="energy"] .bar i { background: var(--en); } [data-stat="energy"] .val { color: var(--en); }
   [data-stat="db"] .bar i { background: var(--db); }   [data-stat="db"] .val { color: var(--db); }
-  [data-stat="stun"] .val { color: var(--stun); }
-  [data-stat="stun"] .btns { margin-top: 12px; }
-  .reset { color: var(--stun); }
 
   /* GM view */
   .grid { display: grid; gap: 12px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
   .card .name { font-size: 18px; margin-bottom: 8px; }
-  .mini { margin-bottom: 8px; }
+  .card.enemy { border-left: 4px solid var(--enemy); }
+  .mini { margin-bottom: 10px; }
   .mini .row { font-size: 14px; }
-  .mini .bar { height: 6px; margin: 4px 0 0; }
+  .mini .bar { height: 6px; margin: 4px 0 8px; }
+  .mini b { font-variant-numeric: tabular-nums; }
+  .tap { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
   .hp i { background: var(--hp); } .en i { background: var(--en); } .dbc i { background: var(--db); }
-  .stunrow b { color: var(--stun); }
+  .stn i { background: var(--stun); }
+  .stunc { color: var(--stun); }
+  .reset { color: var(--stun); }
+  .addform { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .addform .full { grid-column: 1 / -1; }
+  .addform input { padding: 10px; }
+  .addform label { font-size: 13px; color: var(--muted); }
+  .addform .primary { margin-top: 0; background: var(--enemy); }
 </style>
 </head>
 <body>
@@ -96,25 +107,33 @@
     <div class="bar"><i></i></div>
     <div class="btns"></div>
   </div>
-
-  <div class="stat" data-stat="stun">
-    <div class="row"><span class="label">Stun</span><span class="val" data-val></span></div>
-    <div class="btns"></div>
-  </div>
 </section>
 
-<!-- GM screen: everyone's card, read-only -->
+<!-- GM screen -->
 <section id="gm" hidden>
   <header class="top">
     <div><div class="name">GM view</div><div class="muted">Room <span id="groom"></span></div></div>
     <button class="ghost" id="gm-leave">Exit</button>
   </header>
-  <div class="grid" id="gm-grid"><p class="muted">Waiting for players to join…</p></div>
+
+  <h2>Players</h2>
+  <div class="grid" id="gm-players"><p class="muted">Waiting for players to join…</p></div>
+
+  <h2>Enemies</h2>
+  <div class="card" style="margin-bottom:12px">
+    <div class="addform">
+      <div class="full"><label for="e-name">Enemy name</label><input id="e-name" autocomplete="off" placeholder="e.g. Bandit"></div>
+      <div><label for="e-hp">Max HP</label><input id="e-hp" type="number" inputmode="numeric" min="1"></div>
+      <div><label for="e-daze">Daze cap</label><input id="e-daze" type="number" inputmode="numeric" min="1"></div>
+      <button class="primary full" id="e-add">Add enemy</button>
+    </div>
+  </div>
+  <div class="grid" id="gm-enemies"><p class="muted">No enemies yet.</p></div>
 </section>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref as dbRef, set, update, onValue, serverTimestamp }
+  import { getDatabase, ref as dbRef, set, update, push, remove, onValue, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   // ===== Settings — edit these =====
@@ -127,24 +146,31 @@
     messagingSenderId: "103424771652",
     appId: "1:103424771652:web:44585dbc960597ed069e11"
   };
-  const ENERGY_MAX = 10;      // fixed max energy for everyone
-  const DB_MAX = 100;         // fixed max decibels for everyone
-  const DEFAULT_HP_MAX = 20;  // starting Max HP for a new character (players can change it)
+  const ENERGY_MAX = 10;        // fixed max energy for everyone
+  const DB_MAX = 100;           // fixed max decibels for everyone
+  const DEFAULT_HP_MAX = 20;    // starting Max HP for a new character (players can change it)
+  const DEFAULT_ENEMY_HP = 30;  // pre-filled in the Add enemy form
+  const DEFAULT_DAZE_CAP = 5;   // pre-filled in the Add enemy form
   const STEPS = {
     hp:     [-5, -1, +1, +5],
     energy: [-1, +1],
     db:     [-10, -1, +1, +10],
-    stun:   [+1, +5],
+    stun:   [+1, +5],           // GM controls for player stun
+    daze:   [+1],               // GM controls for enemy daze
   };
-  const ROOT = "vitals";  // separate from the ATB timeline's data
+  const ROOT = "vitals";        // player cards
+  const ENEMY_ROOT = "enemies"; // GM-only enemy cards
   // =================================
 
   const db = getDatabase(initializeApp(firebaseConfig));
   const $ = (id) => document.getElementById(id);
   const slug = (s) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const pct = (v, max) => (max ? clamp((v / max) * 100, 0, 100) : 0);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   const show = (id) => ["join", "player", "gm"].forEach((s) => ($(s).hidden = s !== id));
+  const askNum = (msg, cur) => { const v = parseInt(prompt(msg, cur), 10); return Number.isNaN(v) ? null : v; };
+  const sign = (d) => (d > 0 ? "+" : "−") + Math.abs(d);
 
   const store = {
     get() { try { return JSON.parse(localStorage.getItem("vitals-session")); } catch { return null; } },
@@ -152,11 +178,12 @@
     clear() { try { localStorage.removeItem("vitals-session"); } catch {} },
   };
 
-  let unsub = null;
+  let unsubs = [];
+  const stopAll = () => { unsubs.forEach((f) => f()); unsubs = []; };
 
   // ---------- Join ----------
   function startJoin() {
-    if (unsub) { unsub(); unsub = null; }
+    stopAll();
     history.replaceState(null, "", location.pathname);
     show("join");
   }
@@ -175,31 +202,20 @@
 
   // ---------- Player ----------
   let ref = null, state = null;
-  const maxFor = (stat) => ({ hp: state.hpMax, energy: ENERGY_MAX, db: DB_MAX, stun: Infinity }[stat]);
+  const maxFor = (stat) => ({ hp: state.hpMax, energy: ENERGY_MAX, db: DB_MAX }[stat]);
 
-  // Build the +/- buttons once
-  for (const [stat, steps] of Object.entries(STEPS)) {
+  for (const stat of ["hp", "energy", "db"]) {
     const box = document.querySelector(`#player [data-stat="${stat}"] .btns`);
-    for (const d of steps) {
+    for (const d of STEPS[stat]) {
       const b = document.createElement("button");
-      b.textContent = (d > 0 ? "+" : "−") + Math.abs(d);
+      b.textContent = sign(d);
       b.onclick = () => state && save({ [stat]: clamp((state[stat] || 0) + d, 0, maxFor(stat)) });
       box.appendChild(b);
     }
-    if (stat === "stun") {
-      const r = document.createElement("button");
-      r.textContent = "Reset"; r.className = "reset";
-      r.onclick = () => state && save({ stun: 0 });
-      box.appendChild(r);
-    }
-  }
-
-  // Tap a value to type an exact number
-  for (const stat of ["hp", "energy", "db"]) {
     document.querySelector(`#player [data-stat="${stat}"] [data-val]`).onclick = () => {
       if (!state) return;
-      const v = parseInt(prompt("Set value:", state[stat]), 10);
-      if (!Number.isNaN(v)) save({ [stat]: clamp(v, 0, maxFor(stat)) });
+      const v = askNum("Set value:", state[stat]);
+      if (v != null) save({ [stat]: clamp(v, 0, maxFor(stat)) });
     };
   }
 
@@ -217,27 +233,25 @@
 
   function setStat(stat, v, max) {
     const el = document.querySelector(`#player [data-stat="${stat}"]`);
-    el.querySelector("[data-val]").textContent = max == null ? v : `${v} / ${max}`;
-    const bar = el.querySelector(".bar i");
-    if (bar) bar.style.width = max ? `${clamp((v / max) * 100, 0, 100)}%` : "0";
+    el.querySelector("[data-val]").textContent = `${v} / ${max}`;
+    el.querySelector(".bar i").style.width = `${pct(v, max)}%`;
   }
 
   function renderPlayer() {
     setStat("hp", state.hp, state.hpMax);
     setStat("energy", state.energy, ENERGY_MAX);
     setStat("db", state.db, DB_MAX);
-    setStat("stun", state.stun, null);
     if (document.activeElement !== $("hpmax")) $("hpmax").value = state.hpMax;
   }
 
   function startPlayer(room, name) {
-    if (unsub) unsub();
+    stopAll();
     ref = dbRef(db, `${ROOT}/${slug(room)}/${slug(name)}`);
     $("pname").textContent = name;
     $("proom").textContent = room.toUpperCase();
     state = null;
     show("player");
-    unsub = onValue(ref, (snap) => {
+    unsubs.push(onValue(ref, (snap) => {
       if (!snap.exists()) {
         set(ref, { name, hp: DEFAULT_HP_MAX, hpMax: DEFAULT_HP_MAX, energy: ENERGY_MAX,
                    db: 0, stun: 0, updatedAt: serverTimestamp() });
@@ -245,39 +259,120 @@
       }
       state = snap.val();
       renderPlayer();
-    });
+    }));
   }
   $("leave").onclick = () => { store.clear(); startJoin(); };
 
   // ---------- GM ----------
+  let gmRoom = "", gmPlayers = {}, gmEnemies = {};
+  $("e-hp").value = DEFAULT_ENEMY_HP;
+  $("e-daze").value = DEFAULT_DAZE_CAP;
+
+  const btn = (attrs, label, cls = "") =>
+    `<button class="${cls}" ${Object.entries(attrs).map(([k, v]) => `data-${k}="${v}"`).join(" ")}>${label}</button>`;
+
   function mini(label, v, max, cls) {
-    const pct = max ? clamp((v / max) * 100, 0, 100) : 0;
     return `<div class="mini"><div class="row"><span>${label}</span><b>${v} / ${max}</b></div>
-            <div class="bar ${cls}"><i style="width:${pct}%"></i></div></div>`;
+            <div class="bar ${cls}"><i style="width:${pct(v, max)}%"></i></div></div>`;
   }
+
+  function renderPlayersGM() {
+    const list = Object.entries(gmPlayers).filter(([, p]) => p && p.name)
+      .sort(([, a], [, b]) => a.name.localeCompare(b.name));
+    $("gm-players").innerHTML = list.length ? list.map(([id, p]) => {
+      const k = { kind: "player", id, stat: "stun" };
+      return `<div class="card">
+        <div class="name">${esc(p.name)}</div>
+        ${mini("HP", p.hp, p.hpMax, "hp")}
+        ${mini("Energy", p.energy, ENERGY_MAX, "en")}
+        ${mini("Decibels", p.db, DB_MAX, "dbc")}
+        <div class="row" style="margin-bottom:8px"><span>Stun</span><b class="stunc">${p.stun || 0}</b></div>
+        <div class="btns sm">
+          ${STEPS.stun.map((d) => btn({ ...k, act: "bump", d }, sign(d))).join("")}
+          ${btn({ ...k, act: "reset" }, "Reset", "reset")}
+        </div>
+      </div>`;
+    }).join("") : `<p class="muted">Waiting for players to join…</p>`;
+  }
+
+  function renderEnemiesGM() {
+    const list = Object.entries(gmEnemies).filter(([, e]) => e && e.name)
+      .sort(([, a], [, b]) => (a.createdAt || 0) - (b.createdAt || 0));
+    $("gm-enemies").innerHTML = list.length ? list.map(([id, e]) => {
+      const hp = { kind: "enemy", id, stat: "hp" }, dz = { kind: "enemy", id, stat: "daze" };
+      return `<div class="card enemy">
+        <div class="row"><span class="name">${esc(e.name)}</span>${btn({ kind: "enemy", id, act: "del" }, "✕", "x")}</div>
+        <div class="mini">
+          <div class="row"><span>HP</span><b class="tap" data-act="set" data-kind="enemy" data-id="${id}" data-stat="hp">${e.hp} / ${e.hpMax}</b></div>
+          <div class="bar hp"><i style="width:${pct(e.hp, e.hpMax)}%"></i></div>
+          <div class="btns sm">${STEPS.hp.map((d) => btn({ ...hp, act: "bump", d }, sign(d))).join("")}</div>
+          ${btn({ kind: "enemy", id, stat: "hpMax", act: "setmax" }, `Max HP: ${e.hpMax}`, "link")}
+        </div>
+        <div class="mini">
+          <div class="row"><span>Daze</span><b class="stunc">${e.daze} / ${e.dazeMax}</b></div>
+          <div class="bar stn"><i style="width:${pct(e.daze, e.dazeMax)}%"></i></div>
+          <div class="btns sm">
+            ${STEPS.daze.map((d) => btn({ ...dz, act: "bump", d }, sign(d))).join("")}
+            ${btn({ ...dz, act: "reset" }, "Reset", "reset")}
+          </div>
+          ${btn({ kind: "enemy", id, stat: "dazeMax", act: "setmax" }, `Daze cap: ${e.dazeMax}`, "link")}
+        </div>
+      </div>`;
+    }).join("") : `<p class="muted">No enemies yet.</p>`;
+  }
+
+  // One click handler for every GM button
+  $("gm").addEventListener("click", (ev) => {
+    const el = ev.target.closest("[data-act]");
+    if (!el) return;
+    const { act, kind, id, stat } = el.dataset;
+    const item = (kind === "player" ? gmPlayers : gmEnemies)[id];
+    if (!item) return;
+    const r = dbRef(db, `${kind === "player" ? ROOT : ENEMY_ROOT}/${gmRoom}/${id}`);
+    const cap = { hp: item.hpMax, daze: item.dazeMax }[stat] ?? Infinity;
+    const write = (patch) => update(r, { ...patch, updatedAt: serverTimestamp() });
+
+    if (act === "bump") write({ [stat]: clamp((item[stat] || 0) + Number(el.dataset.d), 0, cap) });
+    else if (act === "reset") write({ [stat]: 0 });
+    else if (act === "set") {
+      const v = askNum(`Set ${item.name}'s HP:`, item[stat]);
+      if (v != null) write({ [stat]: clamp(v, 0, cap) });
+    } else if (act === "setmax") {
+      const cur = stat === "hpMax" ? "hp" : "daze";
+      const v = askNum(stat === "hpMax" ? `Max HP for ${item.name}:` : `Daze cap for ${item.name}:`, item[stat]);
+      if (v != null && v >= 1) write({ [stat]: v, [cur]: Math.min(item[cur], v) });
+    } else if (act === "del") {
+      if (confirm(`Remove ${item.name}?`)) remove(r);
+    }
+  });
+
+  $("e-add").onclick = () => {
+    const name = $("e-name").value.trim();
+    const hpMax = parseInt($("e-hp").value, 10), dazeMax = parseInt($("e-daze").value, 10);
+    if (!name) return alert("Give the enemy a name.");
+    if (!(hpMax >= 1) || !(dazeMax >= 1)) return alert("Max HP and daze cap need to be at least 1.");
+    push(dbRef(db, `${ENEMY_ROOT}/${gmRoom}`), {
+      name, hp: hpMax, hpMax, daze: 0, dazeMax,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    $("e-name").value = "";  // keep the numbers so similar enemies are quick to add
+    $("e-name").focus();
+  };
+
   function startGM(room) {
+    stopAll();
+    gmRoom = slug(room);
     $("groom").textContent = room.toUpperCase();
     show("gm");
-    unsub = onValue(dbRef(db, `${ROOT}/${slug(room)}`), (snap) => {
-      const players = Object.values(snap.val() || {})
-        .filter((p) => p && p.name)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      $("gm-grid").innerHTML = players.length ? players.map((p) => `
-        <div class="card">
-          <div class="name">${esc(p.name)}</div>
-          ${mini("HP", p.hp, p.hpMax, "hp")}
-          ${mini("Energy", p.energy, ENERGY_MAX, "en")}
-          ${mini("Decibels", p.db, DB_MAX, "dbc")}
-          <div class="row stunrow"><span>Stun</span><b>${p.stun}</b></div>
-        </div>`).join("") : `<p class="muted">Waiting for players to join…</p>`;
-    });
+    unsubs.push(onValue(dbRef(db, `${ROOT}/${gmRoom}`), (s) => { gmPlayers = s.val() || {}; renderPlayersGM(); }));
+    unsubs.push(onValue(dbRef(db, `${ENEMY_ROOT}/${gmRoom}`), (s) => { gmEnemies = s.val() || {}; renderEnemiesGM(); }));
   }
   $("gm-leave").onclick = startJoin;
 
   // ---------- Boot ----------
-  const gmRoom = new URLSearchParams(location.search).get("gm");
+  const gmParam = new URLSearchParams(location.search).get("gm");
   const saved = store.get();
-  if (gmRoom) startGM(gmRoom);
+  if (gmParam) startGM(gmParam);
   else if (saved?.room && saved?.name) startPlayer(saved.room, saved.name);
   else startJoin();
 </script>

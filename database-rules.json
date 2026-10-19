@@ -1,0 +1,61 @@
+{
+  "rules": {
+    "owners": {
+      "$table": {
+        ".read": true,
+        ".write": "auth != null && !data.exists() && newData.val() === auth.uid"
+      }
+    },
+    "tables": {
+      "$table": {
+        ".read": true,
+        ".write": "auth != null && root.child('owners').child($table).val() === auth.uid",
+        ".validate": "newData.hasChildren(['state']) && newData.child('state').isString() && newData.child('state').val().length < 400000"
+      }
+    },
+    "requests": {
+      "$table": {
+        ".read": "auth != null && root.child('owners').child($table).val() === auth.uid",
+        ".write": "auth != null && root.child('owners').child($table).val() === auth.uid",
+        "$request": {
+          ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid",
+          ".validate": "newData.hasChildren(['uid', 'type']) && newData.child('type').isString() && newData.child('type').val().length <= 10 && (!newData.child('name').exists() || (newData.child('name').isString() && newData.child('name').val().length <= 40))"
+        }
+      }
+    },
+    "vitals": {
+      "$room": {
+        ".read": true,
+        "$player": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['name', 'hp', 'hpMax', 'energy', 'db', 'stun'])",
+          "name": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "hp": { ".validate": "newData.isNumber()" },
+          "hpMax": { ".validate": "newData.isNumber()" },
+          "energy": { ".validate": "newData.isNumber()" },
+          "db": { ".validate": "newData.isNumber()" },
+          "stun": { ".validate": "newData.isNumber()" },
+          "updatedAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "enemies": {
+      "$room": {
+        ".read": true,
+        "$enemy": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['name', 'hp', 'hpMax', 'daze', 'dazeMax'])",
+          "name": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "hp": { ".validate": "newData.isNumber()" },
+          "hpMax": { ".validate": "newData.isNumber()" },
+          "daze": { ".validate": "newData.isNumber()" },
+          "dazeMax": { ".validate": "newData.isNumber()" },
+          "createdAt": { ".validate": "newData.isNumber()" },
+          "updatedAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      }
+    }
+  }
+}
