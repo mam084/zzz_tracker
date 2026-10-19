@@ -119,7 +119,15 @@
 
   // ===== Settings — edit these =====
   const firebaseConfig = {
-    // Paste the same config object you use in atb-timeline
+    window.ATB_FIREBASE = {
+    apiKey: "AIzaSyA-EJ34AkdnGgdvU6jHZBkxLEdX_kubSQA",
+    authDomain: "atb-timeline.firebaseapp.com",
+    databaseURL: "https://atb-timeline-default-rtdb.firebaseio.com",
+    projectId: "atb-timeline",
+    storageBucket: "atb-timeline.firebasestorage.app",
+    messagingSenderId: "103424771652",
+    appId: "1:103424771652:web:44585dbc960597ed069e11"
+  };
   };
   const ENERGY_MAX = 10;      // fixed max energy for everyone
   const DB_MAX = 100;         // fixed max decibels for everyone
