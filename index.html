@@ -122,7 +122,7 @@
   <h2>Enemies</h2>
   <div class="card" style="margin-bottom:12px">
     <div class="addform">
-      <div class="full"><label for="e-name">Enemy name</label><input id="e-name" autocomplete="off" placeholder="e.g. Bandit"></div>
+      <div class="full"><label for="e-name">Enemy name</label><input id="e-name" autocomplete="off" placeholder="Optional — defaults to Enemy 1, 2…"></div>
       <div><label for="e-hp">Max HP</label><input id="e-hp" type="number" inputmode="numeric" min="1"></div>
       <div><label for="e-daze">Daze cap</label><input id="e-daze" type="number" inputmode="numeric" min="1"></div>
       <button class="primary full" id="e-add">Add enemy</button>
@@ -171,6 +171,11 @@
   const show = (id) => ["join", "player", "gm"].forEach((s) => ($(s).hidden = s !== id));
   const askNum = (msg, cur) => { const v = parseInt(prompt(msg, cur), 10); return Number.isNaN(v) ? null : v; };
   const sign = (d) => (d > 0 ? "+" : "−") + Math.abs(d);
+  const fail = (err) => {
+    console.error(err);
+    alert("Couldn't save to the database: " + (err?.message || err) +
+          "\n\nIf this says permission denied, publish database-rules.json in Firebase → Realtime Database → Rules.");
+  };
 
   const store = {
     get() { try { return JSON.parse(localStorage.getItem("vitals-session")); } catch { return null; } },
@@ -228,7 +233,7 @@
   function save(patch) {
     state = { ...state, ...patch };
     renderPlayer();
-    update(ref, { ...patch, updatedAt: serverTimestamp() });
+    update(ref, { ...patch, updatedAt: serverTimestamp() }).catch(fail);
   }
 
   function setStat(stat, v, max) {
@@ -254,7 +259,7 @@
     unsubs.push(onValue(ref, (snap) => {
       if (!snap.exists()) {
         set(ref, { name, hp: DEFAULT_HP_MAX, hpMax: DEFAULT_HP_MAX, energy: ENERGY_MAX,
-                   db: 0, stun: 0, updatedAt: serverTimestamp() });
+                   db: 0, stun: 0, updatedAt: serverTimestamp() }).catch(fail);
         return;
       }
       state = snap.val();
@@ -330,7 +335,7 @@
     if (!item) return;
     const r = dbRef(db, `${kind === "player" ? ROOT : ENEMY_ROOT}/${gmRoom}/${id}`);
     const cap = { hp: item.hpMax, daze: item.dazeMax }[stat] ?? Infinity;
-    const write = (patch) => update(r, { ...patch, updatedAt: serverTimestamp() });
+    const write = (patch) => update(r, { ...patch, updatedAt: serverTimestamp() }).catch(fail);
 
     if (act === "bump") write({ [stat]: clamp((item[stat] || 0) + Number(el.dataset.d), 0, cap) });
     else if (act === "reset") write({ [stat]: 0 });
@@ -342,19 +347,18 @@
       const v = askNum(stat === "hpMax" ? `Max HP for ${item.name}:` : `Daze cap for ${item.name}:`, item[stat]);
       if (v != null && v >= 1) write({ [stat]: v, [cur]: Math.min(item[cur], v) });
     } else if (act === "del") {
-      if (confirm(`Remove ${item.name}?`)) remove(r);
+      if (confirm(`Remove ${item.name}?`)) remove(r).catch(fail);
     }
   });
 
   $("e-add").onclick = () => {
-    const name = $("e-name").value.trim();
+    const name = $("e-name").value.trim() || `Enemy ${Object.keys(gmEnemies).length + 1}`;
     const hpMax = parseInt($("e-hp").value, 10), dazeMax = parseInt($("e-daze").value, 10);
-    if (!name) return alert("Give the enemy a name.");
     if (!(hpMax >= 1) || !(dazeMax >= 1)) return alert("Max HP and daze cap need to be at least 1.");
     push(dbRef(db, `${ENEMY_ROOT}/${gmRoom}`), {
       name, hp: hpMax, hpMax, daze: 0, dazeMax,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-    });
+    }).catch(fail);
     $("e-name").value = "";  // keep the numbers so similar enemies are quick to add
     $("e-name").focus();
   };
@@ -365,7 +369,8 @@
     $("groom").textContent = room.toUpperCase();
     show("gm");
     unsubs.push(onValue(dbRef(db, `${ROOT}/${gmRoom}`), (s) => { gmPlayers = s.val() || {}; renderPlayersGM(); }));
-    unsubs.push(onValue(dbRef(db, `${ENEMY_ROOT}/${gmRoom}`), (s) => { gmEnemies = s.val() || {}; renderEnemiesGM(); }));
+    unsubs.push(onValue(dbRef(db, `${ENEMY_ROOT}/${gmRoom}`), (s) => { gmEnemies = s.val() || {}; renderEnemiesGM(); },
+      (err) => { $("gm-enemies").innerHTML = `<p class="muted">Can't load enemies: ${esc(err.message)}. Check the database rules.</p>`; }));
   }
   $("gm-leave").onclick = startJoin;
 
