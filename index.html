@@ -114,18 +114,12 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, doc, collection, setDoc, onSnapshot, serverTimestamp }
-    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getDatabase, ref as dbRef, set, update, onValue, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
   // ===== Settings — edit these =====
   const firebaseConfig = {
-    apiKey: "AIzaSyA-EJ34AkdnGgdvU6jHZBkxLEdX_kubSQA",
-    authDomain: "atb-timeline.firebaseapp.com",
-    databaseURL: "https://atb-timeline-default-rtdb.firebaseio.com",
-    projectId: "atb-timeline",
-    storageBucket: "atb-timeline.firebasestorage.app",
-    messagingSenderId: "103424771652",
-    appId: "1:103424771652:web:44585dbc960597ed069e11"
+    // Paste the same config object you use in atb-timeline
   };
   const ENERGY_MAX = 10;      // fixed max energy for everyone
   const DB_MAX = 100;         // fixed max decibels for everyone
@@ -136,10 +130,10 @@
     db:     [-10, -1, +1, +10],
     stun:   [+1, +5],
   };
-  const COLLECTION = "vitals";  // separate from the ATB timeline's data
+  const ROOT = "vitals";  // separate from the ATB timeline's data
   // =================================
 
-  const db = getFirestore(initializeApp(firebaseConfig));
+  const db = getDatabase(initializeApp(firebaseConfig));
   const $ = (id) => document.getElementById(id);
   const slug = (s) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -212,7 +206,7 @@
   function save(patch) {
     state = { ...state, ...patch };
     renderPlayer();
-    setDoc(ref, { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+    update(ref, { ...patch, updatedAt: serverTimestamp() });
   }
 
   function setStat(stat, v, max) {
@@ -232,18 +226,18 @@
 
   function startPlayer(room, name) {
     if (unsub) unsub();
-    ref = doc(db, COLLECTION, slug(room), "players", slug(name));
+    ref = dbRef(db, `${ROOT}/${slug(room)}/${slug(name)}`);
     $("pname").textContent = name;
     $("proom").textContent = room.toUpperCase();
     state = null;
     show("player");
-    unsub = onSnapshot(ref, (snap) => {
+    unsub = onValue(ref, (snap) => {
       if (!snap.exists()) {
-        setDoc(ref, { name, hp: DEFAULT_HP_MAX, hpMax: DEFAULT_HP_MAX, energy: ENERGY_MAX,
-                      db: 0, stun: 0, updatedAt: serverTimestamp() });
+        set(ref, { name, hp: DEFAULT_HP_MAX, hpMax: DEFAULT_HP_MAX, energy: ENERGY_MAX,
+                   db: 0, stun: 0, updatedAt: serverTimestamp() });
         return;
       }
-      state = snap.data();
+      state = snap.val();
       renderPlayer();
     });
   }
@@ -258,8 +252,10 @@
   function startGM(room) {
     $("groom").textContent = room.toUpperCase();
     show("gm");
-    unsub = onSnapshot(collection(db, COLLECTION, slug(room), "players"), (snap) => {
-      const players = snap.docs.map((d) => d.data()).sort((a, b) => a.name.localeCompare(b.name));
+    unsub = onValue(dbRef(db, `${ROOT}/${slug(room)}`), (snap) => {
+      const players = Object.values(snap.val() || {})
+        .filter((p) => p && p.name)
+        .sort((a, b) => a.name.localeCompare(b.name));
       $("gm-grid").innerHTML = players.length ? players.map((p) => `
         <div class="card">
           <div class="name">${esc(p.name)}</div>
