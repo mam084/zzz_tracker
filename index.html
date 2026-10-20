@@ -155,7 +155,8 @@
     hp:     [-5, -1, +1, +5],
     energy: [-1, +1],
     db:     [-10, -1, +1, +10],
-    daze:   [-5, -1, +1, +5],   // GM controls for enemy daze
+    daze:   [-10, -5, -1, +1, +5, +10],   // GM controls for enemy daze
+    enemyHp: [-10, -5, -1, +1, +5, +10], // GM controls for enemy HP
   };
   const ROOT = "vitals";        // player cards
   const ENEMY_ROOT = "enemies"; // GM-only enemy cards
@@ -312,7 +313,7 @@
         <div class="mini">
           <div class="row"><span>HP</span><b class="tap" data-act="set" data-kind="enemy" data-id="${id}" data-stat="hp">${e.hp} / ${e.hpMax}</b></div>
           <div class="bar hp"><i style="width:${pct(e.hp, e.hpMax)}%"></i></div>
-          <div class="btns sm">${STEPS.hp.map((d) => btn({ ...hp, act: "bump", d }, sign(d))).join("")}</div>
+          <div class="btns sm">${STEPS.enemyHp.map((d) => btn({ ...hp, act: "bump", d }, sign(d))).join("")}</div>
           ${btn({ kind: "enemy", id, stat: "hpMax", act: "setmax" }, `Max HP: ${e.hpMax}`, "link")}
         </div>
         <div class="mini">
