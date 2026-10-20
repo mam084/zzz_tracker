@@ -155,7 +155,7 @@
     hp:     [-5, -1, +1, +5],
     energy: [-1, +1],
     db:     [-10, -1, +1, +10],
-    daze:   [+1],               // GM controls for enemy daze
+    daze:   [-5, -1, +1, +5],   // GM controls for enemy daze
   };
   const ROOT = "vitals";        // player cards
   const ENEMY_ROOT = "enemies"; // GM-only enemy cards
@@ -316,7 +316,7 @@
           ${btn({ kind: "enemy", id, stat: "hpMax", act: "setmax" }, `Max HP: ${e.hpMax}`, "link")}
         </div>
         <div class="mini">
-          <div class="row"><span>Daze</span><b class="stunc">${e.daze} / ${e.dazeMax}</b></div>
+          <div class="row"><span>Daze</span><b class="stunc tap" data-act="set" data-kind="enemy" data-id="${id}" data-stat="daze">${e.daze} / ${e.dazeMax}</b></div>
           <div class="bar stn"><i style="width:${pct(e.daze, e.dazeMax)}%"></i></div>
           <div class="btns sm">
             ${STEPS.daze.map((d) => btn({ ...dz, act: "bump", d }, sign(d))).join("")}
@@ -342,7 +342,7 @@
     if (act === "bump") write({ [stat]: clamp((item[stat] || 0) + Number(el.dataset.d), 0, cap) });
     else if (act === "reset") write({ [stat]: 0 });
     else if (act === "set") {
-      const v = askNum(`Set ${item.name}'s HP:`, item[stat]);
+      const v = askNum(`Set ${item.name}'s ${stat === "daze" ? "daze" : "HP"}:`, item[stat]);
       if (v != null) write({ [stat]: clamp(v, 0, cap) });
     } else if (act === "setmax") {
       const cur = stat === "hpMax" ? "hp" : "daze";
