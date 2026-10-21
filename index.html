@@ -149,7 +149,7 @@
     appId: "1:103424771652:web:44585dbc960597ed069e11"
   };
   const ENERGY_MAX = 10;        // fixed max energy for everyone
-  const DB_MAX = 100;           // fixed max decibels for everyone
+  const DB_MAX = 50;            // fixed max decibels for everyone
   const DEFAULT_HP_MAX = 20;    // starting Max HP for a new character (players can change it)
   const DEFAULT_ENEMY_HP = 30;  // pre-filled in the Add enemy form
   const DEFAULT_DAZE_CAP = 5;   // pre-filled in the Add enemy form
@@ -275,6 +275,7 @@
       }
       loaded = true;
       state = snap.val();
+      if (state.db > DB_MAX) { save({ db: DB_MAX }); return; }
       renderPlayer();
     }));
   }
