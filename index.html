@@ -41,6 +41,8 @@
   .btns { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
   .btns button { font-size: 18px; font-weight: 600; }
   .btns.sm button { font-size: 15px; padding: 9px 0; }
+  .btns.wide { grid-auto-flow: row; grid-template-columns: repeat(4, 1fr); }
+  .btns.wide .reset { grid-column: 1 / -1; }
   .max { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--muted); }
   .max input { width: 90px; padding: 8px; }
 
@@ -152,10 +154,10 @@
   const DEFAULT_ENEMY_HP = 30;  // pre-filled in the Add enemy form
   const DEFAULT_DAZE_CAP = 5;   // pre-filled in the Add enemy form
   const STEPS = {
-    hp:     [-5, -1, +1, +5],
+    hp:     [-10, -5, -1, +1, +5, +10],
     energy: [-1, +1],
-    db:     [-10, -1, +1, +10],
-    daze:   [-10, -5, -1, +1, +5, +10],   // GM controls for enemy daze
+    db:     [-10, -5, -2, -1, +1, +2, +5, +10],
+    daze:   [-10, -7, -5, -1, +1, +5, +7, +10],   // GM controls for enemy daze
     enemyHp: [-10, -5, -1, +1, +5, +10], // GM controls for enemy HP
   };
   const ROOT = "vitals";        // player cards
@@ -211,6 +213,7 @@
 
   for (const stat of ["hp", "energy", "db"]) {
     const box = document.querySelector(`#player [data-stat="${stat}"] .btns`);
+    if (STEPS[stat].length > 6) box.classList.add("wide");
     for (const d of STEPS[stat]) {
       const b = document.createElement("button");
       b.textContent = sign(d);
@@ -319,7 +322,7 @@
         <div class="mini">
           <div class="row"><span>Daze</span><b class="stunc tap" data-act="set" data-kind="enemy" data-id="${id}" data-stat="daze">${e.daze} / ${e.dazeMax}</b></div>
           <div class="bar stn"><i style="width:${pct(e.daze, e.dazeMax)}%"></i></div>
-          <div class="btns sm">
+          <div class="btns sm${STEPS.daze.length > 6 ? " wide" : ""}">
             ${STEPS.daze.map((d) => btn({ ...dz, act: "bump", d }, sign(d))).join("")}
             ${btn({ ...dz, act: "reset" }, "Reset", "reset")}
           </div>
